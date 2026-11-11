@@ -7,7 +7,7 @@ A Lilu plugin that patches two instructions of `/usr/sbin/bluetoothd` in memory 
 1. **`bluetoothd` crash loop on LE connections ("STATUS 718").** `bluetoothd` sends the legacy LE Create Connection (HCI 0x200D) with a random own address before it has ever set one. The MT7925 rejects that with 0x12 (Invalid HCI Command Parameters), as the Core spec says it should when no random address is set. `bluetoothd` treats the error as fatal, aborts, launchd restarts it, and the loop repeats every few seconds. The patch makes it always use the public address.
 2. **AirPods silent over A2DP ("Failed to read BT clock").** Before every AVDTP START, `bluetoothd` sends HCI Read Clock and the MT7925 answers with Connection_Handle 0x0000 instead of the handle it was asked about. `bluetoothd` finds no link for handle 0, logs the error and never stores the clock to host-time mapping the time-synced AAC-ELD stream needs, so the AirPods play nothing. The patch skips that link check; the clock values in the reply are correct, only the handle is wrong.
 
-The controller itself is brought up by [MtkBt](https://github.com/watchthelight-labs/MtkBt), which loads its firmware. You need MtkBt, BlueToolFixup and this plugin together.
+The controller itself is brought up by the Bluetooth part of [WTLWireless](https://github.com/watchthelight-labs/WTLWireless) (`WTLWirelessBt.kext`; it was a kext of its own, MtkBt, up to 0.2.4), which loads its firmware. You need that loader, BlueToolFixup and this plugin together.
 
 ## Status
 
