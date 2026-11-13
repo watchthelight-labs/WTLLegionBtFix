@@ -2,7 +2,7 @@
 
 Renamed from `LegionBtFix` on 2026-10-31; the kext is still `LegionBtFix.kext`. Old links redirect here.
 
-A Lilu plugin that patches two instructions of `/usr/sbin/bluetoothd` in memory on macOS Tahoe (tested on 26.7.1 25G241 and 26.7.2 25G332), for two things the MediaTek MT7925 Bluetooth controller does that `bluetoothd` does not expect. Nothing on disk changes. It finds both spots by the code around them, with the call targets and stack offsets that move between builds masked out, so a new Tahoe update needs no new release as long as that code stays the same. If it changes, the plugin patches nothing.
+A Lilu plugin that patches two instructions of `/usr/sbin/bluetoothd` in memory on macOS Tahoe (tested on 26.7.1 25G241, 26.7.2 25G332 and 26.7.3 25G342), for two things the MediaTek MT7925 Bluetooth controller does that `bluetoothd` does not expect. Nothing on disk changes. It finds both spots by the code around them, with the call targets and stack offsets that move between builds masked out, so a new Tahoe update needs no new release as long as that code stays the same. If it changes, the plugin patches nothing.
 
 1. **`bluetoothd` crash loop on LE connections ("STATUS 718").** `bluetoothd` sends the legacy LE Create Connection (HCI 0x200D) with a random own address before it has ever set one. The MT7925 rejects that with 0x12 (Invalid HCI Command Parameters), as the Core spec says it should when no random address is set. `bluetoothd` treats the error as fatal, aborts, launchd restarts it, and the loop repeats every few seconds. The patch makes it always use the public address.
 2. **AirPods silent over A2DP ("Failed to read BT clock").** Before every AVDTP START, `bluetoothd` sends HCI Read Clock and the MT7925 answers with Connection_Handle 0x0000 instead of the handle it was asked about. `bluetoothd` finds no link for handle 0, logs the error and never stores the clock to host-time mapping the time-synced AAC-ELD stream needs, so the AirPods play nothing. The patch skips that link check; the clock values in the reply are correct, only the handle is wrong.
@@ -40,7 +40,7 @@ It makes `bluetoothd` write HCI traces with audio payloads to `/var/root/Library
 - It finds each patch site by a byte window around it, with the parts that change between builds masked, so it does not need a list of builds. A Tahoe update that changes the code around either site makes that patch silently stop applying; the window then needs re-taking (`docs/HOW-IT-WORKS.md` says how).
 - Side effects: LE connections from this Mac no longer use a random (private) address; `bluetoothd` stores the local clock for an A2DP stream even if the link it asked about is gone (it is the piconet clock while the Mac is central, which it is for headphones).
 - It does not fix the link drop described above.
-- Tested on two machines: the Legion 5 15IAX10 and one user's ASRock X870 desktop, both on 26.7.1 with 0.2.0 or earlier. 0.3.0 on 26.7.2 has only been checked on the Legion.
+- Tested on two machines: the Legion 5 15IAX10 and one user's ASRock X870 desktop, both on 26.7.1 with 0.2.0 or earlier. 0.3.0 has only run on the Legion so far: on 26.7.2 (25G332), and on 26.7.3 (25G342) since 2026-11-09, where both byte windows matched once each in `bluetoothd` and Bluetooth came up. Nobody else has reported 0.3.0 yet; a report from another machine is welcome as an issue.
 
 ## Installation
 
